@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -196,6 +197,15 @@ export default function LoginPage() {
                 'Sign In'
               )}
             </Button>
+
+            <div className="flex items-center justify-between text-xs sm:text-sm text-slate-600">
+              <Link href="/register" className="hover:text-slate-900 underline underline-offset-2">
+                Create new account
+              </Link>
+              <Link href="/forgot-password" className="hover:text-slate-900 underline underline-offset-2">
+                Forgot password?
+              </Link>
+            </div>
           </form>
 
           <div className="pt-2 border-t border-slate-100">

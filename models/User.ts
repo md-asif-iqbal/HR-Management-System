@@ -96,6 +96,8 @@ export interface IUser extends Document {
   };
   registeredDevice?: IRegisteredDevice;
   deviceTrackingEnabled: boolean;
+  resetPasswordToken?: string;
+  resetPasswordExpires?: Date;
   totalLeaves: number;
   usedLeaves: number;
   createdAt: Date;
@@ -226,6 +228,9 @@ const UserSchema = new Schema<IUser>(
       registeredAt: { type: Date },
     },
     deviceTrackingEnabled: { type: Boolean, default: true },
+
+    resetPasswordToken: { type: String, default: '' },
+    resetPasswordExpires: { type: Date, default: null },
 
     totalLeaves: { type: Number, default: 12 },
     usedLeaves: { type: Number, default: 0 },
