@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# HR Management System
 
-## Getting Started
+A modern, role-based HR and attendance management platform built with Next.js, MongoDB, and Tailwind CSS.
 
-First, run the development server:
+## Overview
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+This project supports two user roles:
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+- HR Admin
+- Employee
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Core modules:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Authentication (Email/Password + Google)
+- Employee profile and records management
+- Attendance (check-in/check-out, history, reports)
+- Leave request and approval flow
+- Document upload and verification
+- Device-based attendance control
+- Excel export support
 
-## Learn More
+## Tech Stack
 
-To learn more about Next.js, take a look at the following resources:
+- Next.js 14 (App Router)
+- React 18 + TypeScript
+- MongoDB + Mongoose
+- NextAuth.js
+- Tailwind CSS + Radix UI
+- Framer Motion
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Setup
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+1. Clone repository
+2. Install dependencies
+3. Create .env.local with required values
+4. Run database seed
+5. Start development server
 
-## Deploy on Vercel
+## Environment Variables
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Create a .env.local file at project root and configure values such as:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- MONGODB_URI
+- NEXTAUTH_SECRET
+- NEXTAUTH_URL
+- NEXT_PUBLIC_FIREBASE_API_KEY
+- NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+- NEXT_PUBLIC_FIREBASE_PROJECT_ID
+- NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+- NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+- NEXT_PUBLIC_FIREBASE_APP_ID
+- NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID
+- IMGBB_API_KEY
+
+## Available Scripts
+
+- npm run dev → Start local dev server
+- npm run build → Build for production
+- npm run start → Start production server
+- npm run lint → Run lint checks
+- npm run seed → Seed database with demo data
+- npm run db:clear → Clear database
+
+## Local Run
+
+- Install: npm install
+- Reset DB: npm run db:clear
+- Seed DB: npm run seed
+- Start app: npm run dev
+- Open: http://localhost:3000
+
+## Demo Login
+
+- HR: hr@company.com / hr123
+- Employee: rahim.ahmed@company.com / emp123
+
+## Key Features
+
+- Role-based route protection
+- Attendance analytics and monthly reporting
+- Leave lifecycle with HR review and comments
+- Employee update history tracking
+- Profile image and document management
+- Responsive UI for desktop and mobile
+
+## Deployment
+
+Deploy to Vercel or any Node.js hosting provider:
+
+- Set all environment variables
+- Ensure MongoDB connection is reachable
+- Build and run using npm run build and npm run start
+
+## License
+
+This project is for educational and internal business workflow use.
