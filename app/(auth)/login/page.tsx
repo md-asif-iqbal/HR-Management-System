@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { signInWithPopup } from 'firebase/auth';
+import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { isNonEmptyText, isValidEmail } from '@/lib/frontendValidation';
 
@@ -91,6 +91,10 @@ export default function LoginPage() {
 
       await redirectByRole();
     } catch (err: any) {
+      if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/cancelled-popup-request') {
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
       if (err.code === 'auth/popup-closed-by-user') return; // user dismissed
       setError(err.message || 'Google sign-in failed');
     } finally {
