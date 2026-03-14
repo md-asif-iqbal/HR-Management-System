@@ -1,6 +1,7 @@
 import { NextAuthOptions } from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 import bcrypt from 'bcryptjs';
+import { randomBytes } from 'crypto';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 
@@ -73,14 +74,33 @@ export const authOptions: NextAuthOptions = {
 
         const tokenData = await res.json();
         const email = tokenData?.users?.[0]?.email?.toLowerCase();
+        const displayName = tokenData?.users?.[0]?.displayName || email?.split('@')[0] || 'User';
         if (!email) throw new Error('No email returned from Google');
 
         await dbConnect();
 
-        const user = await User.findOne({ email }).lean();
+        let user = await User.findOne({ email });
 
         if (!user) {
-          throw new Error('No account found for this Google email. Contact your administrator.');
+          const adminEmails = (process.env.GOOGLE_ADMIN_EMAILS || '')
+            .split(',')
+            .map((item) => item.trim().toLowerCase())
+            .filter(Boolean);
+
+          const role = adminEmails.includes(email) ? 'hr' : 'employee';
+          const randomPassword = await bcrypt.hash(randomBytes(24).toString('hex'), 12);
+
+          user = await User.create({
+            name: displayName,
+            email,
+            password: randomPassword,
+            role,
+            status: 'active',
+            employmentType: 'full-time',
+            joiningDate: new Date(),
+            totalLeaves: role === 'hr' ? 15 : 12,
+            usedLeaves: 0,
+          });
         }
 
         if (user.status === 'inactive' || user.status === 'terminated' || user.status === 'resigned') {
@@ -91,9 +111,9 @@ export const authOptions: NextAuthOptions = {
           id: user._id.toString(),
           email: user.email,
           name: user.name,
-          role: (user as any).role,
-          employeeId: (user as any).employeeId,
-          avatar: (user as any).avatar?.url || '',
+          role: user.role,
+          employeeId: user.employeeId,
+          avatar: user.avatar?.url || '',
         };
       },
     }),
