@@ -55,15 +55,24 @@ export const authOptions: NextAuthOptions = {
       async authorize(credentials) {
         if (!credentials?.idToken) throw new Error('No ID token provided');
 
-        // Verify the Firebase ID token using Google's public tokeninfo endpoint
+        const firebaseApiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+        if (!firebaseApiKey) {
+          throw new Error('Firebase configuration missing');
+        }
+
         const res = await fetch(
-          `https://oauth2.googleapis.com/tokeninfo?id_token=${credentials.idToken}`
+          `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${firebaseApiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken: credentials.idToken }),
+          }
         );
 
         if (!res.ok) throw new Error('Invalid Google token');
 
         const tokenData = await res.json();
-        const email = tokenData.email?.toLowerCase();
+        const email = tokenData?.users?.[0]?.email?.toLowerCase();
         if (!email) throw new Error('No email returned from Google');
 
         await dbConnect();

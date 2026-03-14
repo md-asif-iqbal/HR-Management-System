@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { signInWithPopup, signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { isNonEmptyText, isValidEmail } from '@/lib/frontendValidation';
 
@@ -49,16 +49,7 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      // Step 1: Sign in with Firebase email/password
-      let firebaseIdToken: string | null = null;
-      try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        firebaseIdToken = await userCredential.user.getIdToken();
-      } catch {
-        // Firebase user may not exist – fall through to MongoDB credentials
-      }
-
-      // Step 2: Try NextAuth (MongoDB bcrypt) as primary / fallback
+      // Authenticate with NextAuth credentials (MongoDB + bcrypt)
       const result = await signIn('credentials', {
         email,
         password,
@@ -70,20 +61,7 @@ export default function LoginPage() {
         return;
       }
 
-      // Step 3: If MongoDB failed but Firebase succeeded, try Google-Firebase provider
-      if (firebaseIdToken) {
-        const firebaseResult = await signIn('google-firebase', {
-          idToken: firebaseIdToken,
-          redirect: false,
-        });
-        if (!firebaseResult?.error) {
-          await redirectByRole();
-          return;
-        }
-        setError(firebaseResult.error || 'Sign in failed');
-      } else {
-        setError(result.error || 'Sign in failed');
-      }
+      setError(result.error || 'Sign in failed');
     } catch {
       setError('An unexpected error occurred');
     } finally {
