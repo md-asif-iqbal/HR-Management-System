@@ -5,6 +5,22 @@ import { randomBytes } from 'crypto';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 
+async function generateNextEmployeeId(): Promise<string> {
+  const records = await User.find({ employeeId: { $regex: /^EMP-\d+$/ } })
+    .select('employeeId')
+    .lean();
+
+  const maxNumber = records.reduce((max, record: any) => {
+    const value = String(record.employeeId || '');
+    const match = value.match(/^EMP-(\d+)$/);
+    if (!match) return max;
+    const current = parseInt(match[1], 10);
+    return Number.isFinite(current) && current > max ? current : max;
+  }, 0);
+
+  return `EMP-${String(maxNumber + 1).padStart(3, '0')}`;
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     // ── Email / Password (MongoDB + bcrypt) ───────────────────────────────
@@ -90,17 +106,48 @@ export const authOptions: NextAuthOptions = {
           const role = adminEmails.includes(email) ? 'hr' : 'employee';
           const randomPassword = await bcrypt.hash(randomBytes(24).toString('hex'), 12);
 
-          user = await User.create({
-            name: displayName,
-            email,
-            password: randomPassword,
-            role,
-            status: 'active',
-            employmentType: 'full-time',
-            joiningDate: new Date(),
-            totalLeaves: role === 'hr' ? 15 : 12,
-            usedLeaves: 0,
-          });
+          let createdUser: any = null;
+
+          for (let attempt = 0; attempt < 5; attempt++) {
+            const employeeId = await generateNextEmployeeId();
+
+            try {
+              createdUser = await User.create({
+                employeeId,
+                name: displayName,
+                email,
+                password: randomPassword,
+                role,
+                status: 'active',
+                employmentType: 'full-time',
+                joiningDate: new Date(),
+                totalLeaves: role === 'hr' ? 15 : 12,
+                usedLeaves: 0,
+              });
+              break;
+            } catch (createError: any) {
+              if (createError?.code === 11000 && createError?.keyPattern?.email) {
+                createdUser = await User.findOne({ email });
+                break;
+              }
+
+              if (createError?.code === 11000 && createError?.keyPattern?.employeeId) {
+                continue;
+              }
+
+              throw createError;
+            }
+          }
+
+          if (!createdUser) {
+            throw new Error('Failed to create user. Please try again.');
+          }
+
+          user = createdUser;
+        }
+
+        if (!user) {
+          throw new Error('Authentication failed. Please try again.');
         }
 
         if (user.status === 'inactive' || user.status === 'terminated' || user.status === 'resigned') {
