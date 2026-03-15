@@ -21,6 +21,7 @@ export default function HREmployeesPage() {
   const [deptFilter, setDeptFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Add employee dialog state
   const [addOpen, setAddOpen] = useState(false);
@@ -97,6 +98,25 @@ export default function HREmployeesPage() {
       toast.error(err.message);
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleDeleteEmployee = async (employee: any) => {
+    const confirmed = window.confirm(`Delete ${employee.name} (${employee.employeeId})? This action cannot be undone.`);
+    if (!confirmed) return;
+
+    setDeletingId(employee._id);
+    try {
+      const res = await fetch(`/api/employees/${employee._id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to delete employee');
+
+      toast.success(data.message || 'Employee deleted');
+      fetchEmployees();
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to delete employee');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -226,7 +246,21 @@ export default function HREmployeesPage() {
                       </Badge>
                     </div>
                   </div>
-                  <svg className="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      disabled={deletingId === emp._id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteEmployee(emp);
+                      }}
+                    >
+                      {deletingId === emp._id ? '...' : 'Delete'}
+                    </Button>
+                    <svg className="w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -286,13 +320,27 @@ export default function HREmployeesPage() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => { e.stopPropagation(); router.push(`/hr/employees/${emp._id}`); }}
-                      >
-                        View
-                      </Button>
+                      <div className="inline-flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => { e.stopPropagation(); router.push(`/hr/employees/${emp._id}`); }}
+                        >
+                          View
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={deletingId === emp._id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteEmployee(emp);
+                          }}
+                        >
+                          {deletingId === emp._id ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

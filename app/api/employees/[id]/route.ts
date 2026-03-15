@@ -4,6 +4,9 @@ import { authOptions } from '@/lib/auth';
 import dbConnect from '@/lib/db';
 import User from '@/models/User';
 import EmployeeUpdateLog from '@/models/EmployeeUpdateLog';
+import AttendanceRecord from '@/models/AttendanceRecord';
+import LeaveRequest from '@/models/LeaveRequest';
+import EmployeeDocument from '@/models/EmployeeDocument';
 import {
   ApiValidationError,
   optionalDate,
@@ -324,6 +327,55 @@ export async function PATCH(
     if (error.code === 11000 && error.keyPattern?.employeeId) {
       return NextResponse.json({ error: 'Employee ID already in use by another employee.' }, { status: 409 });
     }
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+}
+
+// DELETE employee (HR only)
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'hr') {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    await dbConnect();
+
+    if (session.user.id === params.id) {
+      return NextResponse.json({ error: 'You cannot delete your own account' }, { status: 400 });
+    }
+
+    const target = await User.findById(params.id).select('name role status').lean();
+    if (!target) {
+      return NextResponse.json({ error: 'Employee not found' }, { status: 404 });
+    }
+
+    if (target.role === 'hr' && target.status === 'active') {
+      const otherActiveHr = await User.countDocuments({
+        role: 'hr',
+        status: 'active',
+        _id: { $ne: params.id },
+      });
+
+      if (otherActiveHr < 1) {
+        return NextResponse.json({ error: 'Cannot delete the last active HR account' }, { status: 400 });
+      }
+    }
+
+    await Promise.all([
+      AttendanceRecord.deleteMany({ userId: params.id }),
+      LeaveRequest.deleteMany({ userId: params.id }),
+      EmployeeDocument.deleteMany({ userId: params.id }),
+      EmployeeUpdateLog.deleteMany({ employeeId: params.id }),
+      EmployeeUpdateLog.deleteMany({ updatedBy: params.id }),
+      User.findByIdAndDelete(params.id),
+    ]);
+
+    return NextResponse.json({ message: `${target.name} deleted successfully` });
+  } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

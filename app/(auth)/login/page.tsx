@@ -8,9 +8,31 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { getRedirectResult, signInWithRedirect } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase';
 import { isNonEmptyText, isValidEmail } from '@/lib/frontendValidation';
+
+async function getFirebaseClient() {
+  const [{ initializeApp, getApps }, { getAuth, GoogleAuthProvider, getRedirectResult, signInWithRedirect }] = await Promise.all([
+    import('firebase/app'),
+    import('firebase/auth'),
+  ]);
+
+  const firebaseConfig = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+    measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+  };
+
+  const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+  const auth = getAuth(app);
+  const googleProvider = new GoogleAuthProvider();
+  googleProvider.setCustomParameters({ prompt: 'select_account' });
+
+  return { auth, googleProvider, getRedirectResult, signInWithRedirect };
+}
 
 function LoginPageContent() {
   const searchParams = useSearchParams();
@@ -27,6 +49,7 @@ function LoginPageContent() {
 
     const handleGoogleRedirectResult = async () => {
       try {
+        const { auth, getRedirectResult } = await getFirebaseClient();
         const redirectResult = await getRedirectResult(auth);
         if (!redirectResult?.user || cancelled) return;
 
@@ -108,6 +131,7 @@ function LoginPageContent() {
     setGoogleLoading(true);
 
     try {
+      const { auth, googleProvider, signInWithRedirect } = await getFirebaseClient();
       await signInWithRedirect(auth, googleProvider);
     } catch (err: any) {
       setError(err.message || 'Google sign-in failed');
