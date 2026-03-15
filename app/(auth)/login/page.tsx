@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
+import { getRedirectResult, signInWithRedirect } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { isNonEmptyText, isValidEmail } from '@/lib/frontendValidation';
 
@@ -21,6 +21,47 @@ function LoginPageContent() {
   const [googleLoading, setGoogleLoading] = useState(false);
 
   const callbackUrl = searchParams.get('callbackUrl') || '/employee/dashboard';
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const handleGoogleRedirectResult = async () => {
+      try {
+        const redirectResult = await getRedirectResult(auth);
+        if (!redirectResult?.user || cancelled) return;
+
+        setGoogleLoading(true);
+        const idToken = await redirectResult.user.getIdToken();
+
+        const nextAuthResult = await signIn('google-firebase', {
+          idToken,
+          redirect: false,
+          callbackUrl,
+        });
+
+        if (cancelled) return;
+
+        if (nextAuthResult?.error) {
+          setError(nextAuthResult.error);
+          setGoogleLoading(false);
+          return;
+        }
+
+        window.location.href = nextAuthResult?.url || callbackUrl;
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err?.message || 'Google sign-in failed');
+          setGoogleLoading(false);
+        }
+      }
+    };
+
+    handleGoogleRedirectResult();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [callbackUrl]);
 
   // ── Email / Password ────────────────────────────────────────────────────
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -67,30 +108,12 @@ function LoginPageContent() {
     setGoogleLoading(true);
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const idToken = await result.user.getIdToken();
-
-      const nextAuthResult = await signIn('google-firebase', {
-        idToken,
-        redirect: false,
-        callbackUrl,
-      });
-
-      if (nextAuthResult?.error) {
-        setError(nextAuthResult.error);
-        return;
-      }
-
-      window.location.href = nextAuthResult?.url || callbackUrl;
+      await signInWithRedirect(auth, googleProvider);
     } catch (err: any) {
-      if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/cancelled-popup-request') {
-        await signInWithRedirect(auth, googleProvider);
-        return;
-      }
-      if (err.code === 'auth/popup-closed-by-user') return; // user dismissed
       setError(err.message || 'Google sign-in failed');
-    } finally {
       setGoogleLoading(false);
+    } finally {
+      // redirect flow takes over navigation; keep loader visible unless there is an error
     }
   };
 
