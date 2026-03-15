@@ -301,7 +301,7 @@ async function seed() {
   ]);
   console.log('🗑️  Cleared all existing data\n');
 
-  const hashedHR = await bcrypt.hash('hr123', 12);
+  const hashedHR = await bcrypt.hash('hr12345', 12);
   const hashedEmp = await bcrypt.hash('emp123', 12);
 
   // ── HR Admin ─────────────────────────────────────────────────────────────
@@ -413,7 +413,7 @@ async function seed() {
   console.log('═══════════════════════════════════════════════════════════════');
   console.log('✅  SEED COMPLETE — 15 employees (1 HR + 14 staff)');
   console.log('═══════════════════════════════════════════════════════════════');
-  console.log('  HR Login:   hr@company.com         password: hr123');
+  console.log('  HR Login:   hr@company.com         password: hr12345');
   console.log('  Emp Login:  rahim.ahmed@company.com password: emp123');
   console.log('              (all other employees also use emp123)');
   console.log('───────────────────────────────────────────────────────────────');
