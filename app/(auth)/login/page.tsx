@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,25 +12,15 @@ import { signInWithPopup, signInWithRedirect } from 'firebase/auth';
 import { auth, googleProvider } from '@/lib/firebase';
 import { isNonEmptyText, isValidEmail } from '@/lib/frontendValidation';
 
-export default function LoginPage() {
-  const router = useRouter();
+function LoginPageContent() {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
-  // Redirect helper after successful sign-in
-  async function redirectByRole() {
-    const res = await fetch('/api/auth/session');
-    const session = await res.json();
-    if (session?.user?.role === 'hr') {
-      router.push('/hr/dashboard');
-    } else {
-      router.push('/employee/dashboard');
-    }
-    router.refresh();
-  }
+  const callbackUrl = searchParams.get('callbackUrl') || '/employee/dashboard';
 
   // ── Email / Password ────────────────────────────────────────────────────
   const handleEmailSubmit = async (e: React.FormEvent) => {
@@ -55,10 +45,11 @@ export default function LoginPage() {
         email,
         password,
         redirect: false,
+        callbackUrl,
       });
 
       if (!result?.error) {
-        await redirectByRole();
+        window.location.href = result?.url || callbackUrl;
         return;
       }
 
@@ -82,6 +73,7 @@ export default function LoginPage() {
       const nextAuthResult = await signIn('google-firebase', {
         idToken,
         redirect: false,
+        callbackUrl,
       });
 
       if (nextAuthResult?.error) {
@@ -89,7 +81,7 @@ export default function LoginPage() {
         return;
       }
 
-      await redirectByRole();
+      window.location.href = nextAuthResult?.url || callbackUrl;
     } catch (err: any) {
       if (err?.code === 'auth/popup-blocked' || err?.code === 'auth/cancelled-popup-request') {
         await signInWithRedirect(auth, googleProvider);
@@ -220,5 +212,24 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-3 py-6 sm:p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader className="text-center px-4 sm:px-6">
+              <CardTitle className="text-xl sm:text-2xl font-bold text-slate-900">HR Management System</CardTitle>
+              <CardDescription>Loading sign in...</CardDescription>
+            </CardHeader>
+          </Card>
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
   );
 }
